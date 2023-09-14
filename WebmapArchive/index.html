@@ -1,0 +1,182 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add a map to a webpage</title>
+<script src="https://cdn.maptiler.com/maptiler-sdk-js/v1.1.1/maptiler-sdk.umd.js"></script>
+<link rel='stylesheet' href='https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.css' />
+<script src='https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.js'></script>
+<link href="https://cdn.maptiler.com/maptiler-sdk-js/v1.1.1/maptiler-sdk.css" rel="stylesheet" />
+<link href='https://www.unpkg.com/@watergis/maplibre-gl-legend@latest/dist/maplibre-gl-legend.css' rel='stylesheet' />
+<script src="https://www.unpkg.com/@watergis/maplibre-gl-legend@latest/dist/maplibre-gl-legend.umd.js"></script>
+
+<style>
+  body {margin: 0; padding: 0;}
+  #map {position: absolute; top: 0; bottom: 0; width: 100%;}
+</style>
+</head>
+<body>// 3857 to 4326
+<div id="map"></div>
+  <script>
+    maptilersdk.config.apiKey = 'upK2HQ8GCr8vMKjdFvuS';
+    const map = new maptilersdk.Map({
+      container: 'map', // container id
+      style: 'ocean',
+      center: [-71.016875, 40.254983], // starting position [lng, lat]
+      zoom: 6.12, // starting zoom
+      //pitch: 76,
+      //bearing: -20,
+     // maxPitch: 85,
+    });
+    
+
+    map.on('load', () => {
+        map.addSource('national-park', {
+            'type': 'geojson',
+            'data': 'https://rtjaceinnis.github.io/RTjaceInnis/Sedi.geojson'
+        });
+        map.addSource('root', {
+            'type': 'geojson',
+            'data': 'https://rtjaceinnis.github.io/RTjaceInnis/Windlease_Footprint.geojson'
+        });
+        map.addSource('ani', {
+            'type': 'geojson',
+            'data': 'https://rtjaceinnis.github.io/RTjaceInnis/Scallops.geojson'
+        });
+
+
+      
+      
+        map.addLayer({
+            'id': 'MUD',
+            'type': 'fill',
+            'source': 'national-park',
+            'paint': {
+                'fill-color': '#B42222',
+                'fill-opacity': 0.3
+            },
+            'filter': ['==', 'Sediment', 2000]
+        });
+        map.addLayer({
+            'id': 'parkbowqry',
+            'type': 'fill',
+            'source': 'national-park',
+            'paint': {
+                'fill-color': '#B42222',
+                'fill-opacity': 0.1
+            },
+            'filter': ['any', ['==', 'Sediment', 250], ['==', 'Sediment', 210], ['==', 'Sediment', 260]  ]
+          });
+          map.addLayer({
+            'id': 'SAND',
+            'type': 'fill',
+            'source': 'national-park',
+            'paint': {
+                'fill-color': '#ffbf97',
+                'fill-opacity': 0.3
+            },
+            'filter': ['==', 'Sediment', 1000]
+        });
+        map.addLayer({
+            'id': 'parkbasdfasdowqry',
+            'type': 'fill',
+            'source': 'national-park',
+            'paint': {
+                'fill-color': '#ffbf97',
+                'fill-opacity': 0.1
+            },
+            'filter': ['any', ['==', 'Sediment', 120], ['==', 'Sediment', 150], ['==', 'Sediment', 170]  ]
+          });
+
+          map.addLayer({
+            'id': 'ROCK',
+            'type': 'fill',
+            'source': 'national-park',
+            'paint': {
+                'fill-color': '#77DD77',
+                'fill-opacity': 0.3
+            },
+            'filter': ['==', 'Sediment', 5000]
+        });
+        map.addLayer({
+            'id': 'pafasdowqry',
+            'type': 'fill',
+            'source': 'national-park',
+            'paint': {
+                'fill-color': '#77DD77',
+                'fill-opacity': 0.1
+            },
+            'filter': ['any', ['==', 'Sediment', 510], ['==', 'Sediment', 520], ['==', 'Sediment', 530]  ]
+          });
+
+          // map.addLayer({
+          //   'id': 'parwfasdowqry',
+          //   'type': 'fill',
+          //   'source': 'national-park',
+          //   'paint': {
+          //       'fill-color': '#ffccde',
+          //       'fill-opacity': 0.2
+          //   },
+          //   'filter': ['any', ['==', 'Sediment', 30], ['==', 'Sediment', 60], ['==', 'Sediment', 70] , ['==', 'Sediment', 80]  ]
+          // });
+
+          
+        map.addLayer({
+            'id': 'animal',
+            'type': 'fill',
+            'source': 'ani',
+            'paint': {
+                'fill-color': ['interpolate',
+            ['linear'],
+            ['get', 'SeaStarAve'],
+            0, "rgba(235, 245, 192, 0.0)",
+            1, "rgba(235, 245, 192, 0.4)",
+            5, "rgba(235, 245, 192, 0.1)",
+            15, "rgba(216, 255, 40, 1)",
+            40, "rgba(145, 27, 138, 1)",
+
+          ],
+                'fill-opacity': 0.6
+            },
+        });
+
+
+
+
+          map.addLayer({
+            'id': 'bet',
+            'type': 'fill',
+            'source': 'root',
+            'paint': {
+                'fill-color': '#17742B',
+                'fill-opacity': 0.5
+            },
+          });
+
+        
+    });
+    map.on('load', function() {
+
+
+  const targets = {
+    bet: "WindLease",
+    MUD: "MUD",
+    SAND: "SAND",
+    ROCK: "ROCK",
+    animal: "AnimalDensity"
+  };
+  const options = {
+    showDefault: true,
+    showCheckbox: true,
+    onlyRendered: false,
+    reverseOrder: true
+  };
+  map.addControl(new MaplibreLegendControl.MaplibreLegendControl(targets, options), "top-left");
+});
+
+
+  </script>
+</body>
+</html>
+
