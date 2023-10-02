@@ -1,0 +1,23 @@
+{PROJECT_ID} = GCP Project ID (e.g. = shiny-project) coastal-monitoring-398413
+{REGION} = GCP Project Region (e.g. = us-central1)  us-central1
+{REPO_NAME} = GCP Artifact Registry Repository Name (e.g. = shiny-repo) shinyapp
+{IMAGE_NAME} = Container Image Name (e.g. = shiny-image) shiny-image
+{IMAGE_TAG} = Container Image Tag (e.g. = v0.1, v1.2) v1.2
+
+
+docker build --tag=us-central1-docker.pkg.dev/coastal-monitoring-398413/shinyapp/shiny-image:v1.2 .
+
+
+docker run -d -p 5000:5000 us-central1-docker.pkg.dev/coastal-monitoring-398413/shinyapp/shiny-image:v1.2
+
+
+gcloud beta artifacts repositories create shinyapp --repository-format=docker --location=us-central1
+
+
+gcloud auth configure-docker us-central1-docker.pkg.dev
+
+
+
+docker push us-central1-docker.pkg.dev/coastal-monitoring-398413/shinyapp/shiny-image:v1.2
+
+

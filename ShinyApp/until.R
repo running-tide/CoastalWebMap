@@ -12,33 +12,24 @@ library(leaflet.extras)
  
 cat2 = colorNumeric(palette = c(  '#005aff', '#43c8c8','#77DD77', '#fff700', '#ff0000', "#B42222"), domain = c(-2:24))
 
-
 visP = list(min= -2.0,max= 24.0,
-            palette= c('#005aff', '#43c8c8','#77DD77', '#fff700', '#ff0000', "#B42222")
-)
+            palette= c('#005aff', '#43c8c8','#77DD77', '#fff700', '#ff0000', "#B42222"))
+
 cat3 = colorNumeric(palette = c('#3500a8', '#0800ba','#003fd6', '#00aca9', '#77f800', "#ff8800",
                                 '#b30000', '#920000', "#880000"), domain = c(0:10))
 
 vis3 = list(min= 0,max= 10,
             palette= c('#3500a8', '#0800ba','#003fd6', '#00aca9', '#77f800', "#ff8800",
-                       '#b30000', '#920000', "#880000")
-)
-
-
-
-
-
-
-
+                       '#b30000', '#920000', "#880000"))
 
 pal <- colorBin (
-  palette = c("blue","purple","red","yellow"),
-  domain = NULL,
-  n = 7, pretty=TRUE)
+  palette = c("blue","purple","red","yellow"), domain = NULL,n = 7, pretty=TRUE)
 
 
 
-
+#//////////////////////\\\\\\\\\\\\\\\\\\\\\/////////////////////////////
+#/////////////         UI       \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#//////////////////////\\\\\\\\\\\\\\\\\\\\\/////////////////////////////
 ui <- bootstrapPage(
   tags$style(type = "text/css", "html, body {width:100%;height:100%}"),
   leafletOutput("map", width = "100%", height = "100%"),
@@ -52,15 +43,15 @@ ui <- bootstrapPage(
                 checkboxInput("ptem", "Tempurature", FALSE),
                 checkboxInput("pchl", "Chlorophyll", FALSE),
                 selectInput("aninum", label = h3("Select box"), 
-                            choices = (names(animal)[c(-1,-8,-9)]))
-  )
-)
+                            choices = (names(animal)[c(-1,-8,-9)]))))
+
 
 server <- function(input, output, session) {
   
+#//////////////////////\\\\\\\\\\\\\\\\\\\\\/////////////////////////////
+#/////////////          reactive                 \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#//////////////////////\\\\\\\\\\\\\\\\\\\\\/////////////////////////////
 
-
-    
   theaninum = reactive({
     (1:length(names(animal)))[names(animal) == input$aninum]
   })
@@ -81,9 +72,10 @@ server <- function(input, output, session) {
       select("chlor_a")$mean()
   })
   
-  
-  
-  
+
+#//////////////////////\\\\\\\\\\\\\\\\\\\\\/////////////////////////////
+#/////////////    Base map             \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#//////////////////////\\\\\\\\\\\\\\\\\\\\\/////////////////////////////
 
   output$map <- renderLeaflet({
       leaflet() %>% 
@@ -91,7 +83,7 @@ server <- function(input, output, session) {
       setView(-72.65, 40.0285, zoom = 7)
   })
   
-
+#/////////////    ObserverEvent          ani  (animal) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   
     observeEvent(c(input$ani,input$aninum),{
       if(input$ani){
@@ -112,8 +104,7 @@ server <- function(input, output, session) {
       }})
     
 
-    
-    
+#/////////////    ObserverEvent          ploo  (windlease) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
     
     
     
@@ -139,12 +130,9 @@ server <- function(input, output, session) {
           clearGroup("Wind Lease Area")  %>% 
           removeControl("as")
       }})
-    
-    
-    
-    
-    
-    
+
+#/////////////    ObserverEvent    ptem  (temperature) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
     
     observeEvent(c(input$ptem,input$monthv),{
       if(input$ptem){
@@ -163,9 +151,7 @@ server <- function(input, output, session) {
           removeControl("er")
       }})
     
-    
-    
-    
+#/////////////    ObserverEvent    pchl  (chlorophil) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
     
     observeEvent(c(input$pchl,input$monthv),{
       if(input$pchl){
