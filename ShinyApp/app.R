@@ -2,7 +2,7 @@ library(rgdal)
 library(leaflet)
 library(leaflet.extras)
 library(leaflet.esri)
-#animal = readOGR("geojson/Scallops.geojson")
+#animal = rgdal::readOGR("geojson/Scallops.geojson")
 #cmwl = readOGR("geojson/CleanMaster_Windlease.geojson")
 
 
@@ -47,11 +47,13 @@ ui <- bootstrapPage(
                             choices = (names(animal)[c(-1,-8,-9)]))))
 
 
+#//////////////////////\\\\\\\\\\\\\\\\\\\\\/////////////////////////////
+#/////////////          reactive                 \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+#//////////////////////\\\\\\\\\\\\\\\\\\\\\/////////////////////////////
+
+
+
 server <- function(input, output, session) {
-  
-  #//////////////////////\\\\\\\\\\\\\\\\\\\\\/////////////////////////////
-  #/////////////          reactive                 \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-  #//////////////////////\\\\\\\\\\\\\\\\\\\\\/////////////////////////////
   
   theaninum = reactive({
     (1:length(names(animal)))[names(animal) == input$aninum]

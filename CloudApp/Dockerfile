@@ -3,30 +3,27 @@ FROM rocker/shiny-verse:latest
 
 # system libraries of general use
 RUN apt-get update && apt-get install -y \
-    curl \
-    sudo \
-    pandoc \
-    pandoc-citeproc \
+    --no-install-recommends \
+    curl git libboost-all-dev \
+    libgdal-dev libgit2-dev libproj-dev libssl-dev  \
+    libudunits2-0 libudunits2-dev \
+    git-core \
     libcurl4-gnutls-dev \
-    libcairo2-dev \
-    libxt-dev \
-    libssl-dev \
-    libssh2-1-dev\
-    ## clean up
+    curl \
+    libsodium-dev \
+    libxml2-dev \
+    libicu-dev \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/ \
-    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+    && rm -rf /var/lib/apt/lists/*
 
 # install R packages required 
 # (change it depending on the packages you need)
 RUN R -e "install.packages('shiny', repos='http://cran.rstudio.com/')"
-RUN R -e "install.packages('shinydashboard', repos='http://cran.rstudio.com/')"
-RUN R -e "install.packages('shinydashboardPlus', repos='http://cran.rstudio.com/')"
-RUN R -e "install.packages('shinythemes', repos='http://cran.rstudio.com/')"
+RUN R -e "install.packages('rgdal', repos='http://cran.rstudio.com/')"
+RUN R -e "install.packages('sp', repos='http://cran.rstudio.com/')"
 RUN R -e "install.packages('leaflet')"
 RUN R -e "install.packages('leaflet.extras')"
 RUN R -e "install.packages('leaflet.esri')"
-RUN R -e "install.packages('rgdal', repos='http://cran.rstudio.com/')"
 
 # clean up
 RUN rm -rf /tmp/downloaded_packages/ /tmp/*.rds
