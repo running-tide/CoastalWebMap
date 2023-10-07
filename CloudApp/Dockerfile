@@ -24,6 +24,7 @@ RUN R -e "install.packages('sp', repos='http://cran.rstudio.com/')"
 RUN R -e "install.packages('leaflet')"
 RUN R -e "install.packages('leaflet.extras')"
 RUN R -e "install.packages('leaflet.esri')"
+RUN R -e "install.packages('raster')"
 
 # clean up
 RUN rm -rf /tmp/downloaded_packages/ /tmp/*.rds

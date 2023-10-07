@@ -2,8 +2,8 @@ library(rgdal)
 library(leaflet)
 library(leaflet.extras)
 library(leaflet.esri)
-#animal = rgdal::readOGR("geojson/Scallops.geojson")
-#cmwl = readOGR("geojson/CleanMaster_Windlease.geojson")
+animal = rgdal::readOGR("geojson/Scallops.geojson")
+cmwl = readOGR("geojson/CleanMaster_Windlease.geojson")
 
 
 
