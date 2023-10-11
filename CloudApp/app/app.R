@@ -3,7 +3,7 @@ library(leaflet)
 library(leaflet.extras)
 library(leaflet.esri)
 library(rgdal)
-
+library(htmlwidgets)
 library(raster) #need to install
 
 
@@ -11,16 +11,14 @@ img_dir = "images"
 
 animal = rgdal::readOGR("geojson/Scallops.geojson")
 cmwl = rgdal::readOGR("geojson/CleanMaster_Windlease.geojson")
-taom = raster("sst/MODIS_SST_2010-2021_1.tif")
+taom = raster("tifs/MODIS_SST_2010-2021_1.tif")
 
 
-cat2 = colorNumeric(palette = c(  '#005aff', '#43c8c8','#77DD77', '#fff700', '#ff0000', "#B42222"), domain = c(-2:24))
-
-visP = list(min= -2.0,max= 24.0,
-            palette= c('#005aff', '#43c8c8','#77DD77', '#fff700', '#ff0000', "#B42222"))
+cat2 = colorNumeric(palette = c('#005aff', '#43c8c8','#77DD77', '#fff700', '#ff0000', "#B42222"),
+                    domain = c(-2:30), na.color = "transparent")
 
 cat3 = colorNumeric(palette = c('#3500a8', '#0800ba','#003fd6', '#00aca9', '#77f800', "#ff8800",
-                                '#b30000', '#920000', "#880000"), domain = c(0:10))
+                                '#b30000', '#920000', "#880000"), domain = c(0:10),  na.color = "transparent")
 
 vis3 = list(min= 0,max= 10,
             palette= c('#3500a8', '#0800ba','#003fd6', '#00aca9', '#77f800', "#ff8800",
@@ -37,7 +35,7 @@ ui <- bootstrapPage(
   absolutePanel(top = 10, right = 10,
                 sliderInput("range", "Year", 2011, 2021,
                             value = c(2015, 2021), step = 1),
-                sliderInput("monthv", "Month", 1, 13,
+                sliderInput("monthv", "Month", 1, 12,
                             value = 1, step = 1),
                 checkboxInput("ani", "Animal Density", FALSE),
                 checkboxInput("ploo", "WindEnergy Lease", FALSE),
@@ -49,6 +47,10 @@ ui <- bootstrapPage(
 
 server <- shinyServer(function(input, output, session){
   
+  local <- reactiveValues(
+    rast = NULL,
+    raster_value = data.frame(value = NA, long = 0, lat = 0)
+  )
   
   theaninum = reactive({
     (1:length(names(animal)))[names(animal) == input$aninum]
@@ -59,10 +61,13 @@ server <- shinyServer(function(input, output, session){
       domain = animal[[theaninum()]],
       n = 7, pretty=TRUE)})
   temget = reactive({
-    raster(paste0("sst/MODIS_SST_2010-2021_",input$monthv[1], ".tif"))
+    raster(paste0("tifs/MODIS_SST_2010-2021_",input$monthv[1], ".tif"))
+  })
+  chlorget = reactive({
+    raster(paste0("tifs/MODIS_chlor_2010-2021_",input$monthv[1], ".tif"))
   })
   
-
+  
   #//////////////////////\\\\\\\\\\\\\\\\\\\\\/////////////////////////////
   #/////////////    Base map             \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   #//////////////////////\\\\\\\\\\\\\\\\\\\\\/////////////////////////////
@@ -70,7 +75,21 @@ server <- shinyServer(function(input, output, session){
   output$map <- renderLeaflet({
     leaflet() %>% 
       addEsriBasemapLayer(esriBasemapLayers$Oceans, autoLabels = TRUE)%>%
-      setView(-72.65, 40.0285, zoom = 7)
+      setView(-72.65, 40.0285, zoom = 7) %>% 
+      onRender(
+        "function(el,x){
+                    this.on('mousemove', function(e) {
+                        var lat = e.latlng.lat;
+                        var lng = e.latlng.lng;
+                        var coord = [lat, lng];
+                        Shiny.onInputChange('hover_coordinates', coord)
+                    });
+                    this.on('mouseout', function(e) {
+                        Shiny.onInputChange('hover_coordinates', null)
+                    })
+                }"
+      )
+    
   })
   
   #/////////////    ObserverEvent          ani  (animal) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -95,7 +114,7 @@ server <- shinyServer(function(input, output, session){
   
   
   
-#/////////////    ObserverEvent          ploo  (windlease) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  #/////////////    ObserverEvent          ploo  (windlease) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   
   observeEvent(input$ploo,{
     if(input$ploo){
@@ -125,13 +144,13 @@ server <- shinyServer(function(input, output, session){
   
   #/////////////    ObserverEvent          ptem  (Temp) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   
-  observeEvent(c(input$ptem,input$monthv),{
+  observeEvent(c(input$ptem,input$monthv), priority = 1, {
     if(input$ptem){
-      chat = temget()
+      local$rast = temget()
       
       proxy = leafletProxy("map") %>%
         clearGroup("Temp") %>% 
-        addRasterImage(chat, group = "Temp", colors = cat2, opacity = 0.8) %>% 
+        addRasterImage(local$rast, group = "Temp", colors = cat2, opacity = 0.8) %>% 
         addLegend("bottomleft", pal = cat2, values = c(-2:24), layerId = "er",
                   title = "TEMP(c)",opacity = .8)}
     else{
@@ -140,6 +159,75 @@ server <- shinyServer(function(input, output, session){
         removeControl("er")
     }})
   
+  
+  
+  observeEvent(
+    input$hover_coordinates[1],
+    {if(input$ptem){# extract raster value based on input$hover_coordinates
+      local$raster_value <- raster::extract(
+        local$rast,
+        matrix(
+          c(input$hover_coordinates[2], input$hover_coordinates[1]),
+          nrow = 1
+        )
+      )
+      
+      # cursor lat/long and corresponding raster value in a reactive data.frame
+      local$raster_value <- data.frame(
+        value = round(local$raster_value, 2),
+        long = input$hover_coordinates[2],
+        lat = input$hover_coordinates[1]
+      )
+    }}
+  )
+  
+  # Use "addCircleMarkers" to generate popup containing raster value
+  observeEvent(
+    local$raster_value, 
+    {
+      if(input$ptem){
+        req(input$hover_coordinates[1], local$rast)
+        
+        leafletProxy("map") %>%
+          addCircleMarkers(
+            data = local$raster_value,
+            label = ~ value,
+            labelOptions = labelOptions(
+              style = list(
+                "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                "font-size" = "12px",
+                "font-weight" = "bold",
+                "border-color" = "rgba(0,0,0,0.5)"
+              )
+            ),
+            stroke = FALSE,
+            fill = TRUE,
+            fillColor = "#00000000",
+            radius = 8
+          )
+      }}
+  )
+  
+  
+  
+  #/////////////    ObserverEvent          pchl  (Chlo) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  
+  observeEvent(c(input$pchl,input$monthv),{
+    if(input$pchl){
+      chat = chlorget()
+      
+      proxy = leafletProxy("map") %>%
+        clearGroup("chlo") %>% 
+        addRasterImage(chat,
+                       group = "chlo", colors = cat3,
+                       opacity = 0.7) %>% 
+        addLegend("bottomleft", pal = cat3, values = c(0:10), layerId = "dr",
+                  title = "Chlorophil	mg/m^3",opacity = .8 )}
+    else{
+      proxy = leafletProxy("map") %>%
+        clearGroup("chlo") %>% 
+        removeControl("dr")
+    }})
   
   
 })

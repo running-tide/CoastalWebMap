@@ -1,6 +1,6 @@
 library(ggplot2)
 library(sf)
-
+library(stars)
 
 ROI = function( stri = "[117.83526716151925, 15.49233818000526],
           [117.83526716151925, 6.486174330165204],
@@ -46,8 +46,8 @@ data = ee$ImageCollection('NASA/OCEANDATA/MODIS-Terra/L3SMI')$
 
 ted = Map$addLayer(data, visP, 'false color composite')
 
-
-
+ee_as_rast(image = data, region = nysb, dsn = "testguy")
+data
 
 
 visP = list(min= 0,max= 10,

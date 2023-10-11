@@ -1,3 +1,33 @@
+library(raster)
+
+r <- raster("MODIS _SST _2010-2021_1.tif")
+cat2 = colorNumeric(palette = c('#005aff', '#43c8c8','#77DD77', '#fff700', '#ff0000', "#B42222"),
+                    domain = c(-2:24), na.color = "transparent")
+
+
+leaflet() %>% addTiles() %>%
+  addRasterImage(r, colors = cat2, opacity = 0.8) %>%
+  addLegend(pal = cat2, values = c(-2:24),
+            title = "Surface temp")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 images <- ee$ImageCollection("COPERNICUS/S2_SR")
 sf <- ee$Geometry$Point(c(-122.463, 37.768))
 

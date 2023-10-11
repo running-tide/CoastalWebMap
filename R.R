@@ -9,11 +9,10 @@ library(htmltools)
 
 
 
-animal = readOGR("geojson/Scallops.geojson")
-windfoot = readOGR("geojson/Windlease_Footprint.geojson")
-sed = readOGR("geojson/Sediment.geojson")
-data = readOGR(data)
-cmwl = readOGR("geojson/CleanMaster_Windlease.geojson")
+#animal = readOGR("geojson/Scallops.geojson")
+#windfoot = readOGR("geojson/Windlease_Footprint.geojson")
+#sed = readOGR("geojson/Sediment.geojson")
+#cmwl = readOGR("geojson/CleanMaster_Windlease.geojson")
 
 
 

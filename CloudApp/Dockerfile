@@ -25,6 +25,8 @@ RUN R -e "install.packages('leaflet')"
 RUN R -e "install.packages('leaflet.extras')"
 RUN R -e "install.packages('leaflet.esri')"
 RUN R -e "install.packages('raster')"
+RUN R -e "install.packages('htmlwidgets')"
+
 
 # clean up
 RUN rm -rf /tmp/downloaded_packages/ /tmp/*.rds
