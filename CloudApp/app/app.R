@@ -12,14 +12,14 @@ img_dir = "images"
 animal = rgdal::readOGR("geojson/Scallops.geojson")
 cmwl = rgdal::readOGR("geojson/CleanMaster_Windlease.geojson")
 taom = raster("tifs/MODIS_SST_2010-2021_1.tif")
-
+ca = raster("tifs/bathymetry.tif")
+cont = rgdal::readOGR("geojson/Contors_5_110_15r.geojson")
 
 cat2 = colorNumeric(palette = c('#005aff', '#43c8c8','#77DD77', '#fff700', '#ff0000', "#B42222"),
                     domain = c(-2:30), na.color = "transparent")
 
 cat3 = colorNumeric(palette = c('#3500a8', '#0800ba','#003fd6', '#00aca9', '#77f800', "#ff8800",
                                 '#b30000', '#920000', "#880000"), domain = c(0:10),  na.color = "transparent")
-
 vis3 = list(min= 0,max= 10,
             palette= c('#3500a8', '#0800ba','#003fd6', '#00aca9', '#77f800', "#ff8800",
                        '#b30000', '#920000', "#880000"))
@@ -33,16 +33,20 @@ ui <- bootstrapPage(
   tags$style(type = "text/css", "html, body {width:100%;height:100%}"),
   leafletOutput("map", width = "100%", height = "100%"),
   absolutePanel(top = 10, right = 10,
-                sliderInput("range", "Year", 2011, 2021,
-                            value = c(2015, 2021), step = 1),
+                sliderInput("bathint", "Depth", -100, 0,
+                            value = c(-20, -10), step = 1),
                 sliderInput("monthv", "Month", 1, 12,
                             value = 1, step = 1),
                 checkboxInput("ani", "Animal Density", FALSE),
                 checkboxInput("ploo", "WindEnergy Lease", FALSE),
                 checkboxInput("ptem", "Tempurature", FALSE),
                 checkboxInput("pchl", "Chlorophyll", FALSE),
-                selectInput("aninum", label = h3("Select Animal Dataset"), 
-                            choices = (names(animal)[c(-1,-8,-9)]))))
+                checkboxInput("bath", "Bathymetry", FALSE),
+                selectInput("aninum", label = ("Select Animal Dataset"), 
+                            choices = (names(animal)[c(-1,-8,-9)])),
+                selectInput("insp", label = "inspector tool (click to retrieve value)", 
+                            choices = c("Temp","Chlor","Depth")
+                )))
 
 
 server <- shinyServer(function(input, output, session){
@@ -51,7 +55,6 @@ server <- shinyServer(function(input, output, session){
     rast = NULL,
     raster_value = data.frame(value = NA, long = 0, lat = 0)
   )
-  
   theaninum = reactive({
     (1:length(names(animal)))[names(animal) == input$aninum]
   })
@@ -59,14 +62,18 @@ server <- shinyServer(function(input, output, session){
     colorBin (
       palette = c("blue","purple","red","yellow"),
       domain = animal[[theaninum()]],
-      n = 7, pretty=TRUE)})
+      n = 7, pretty=TRUE)
+  })
   temget = reactive({
     raster(paste0("tifs/MODIS_SST_2010-2021_",input$monthv[1], ".tif"))
   })
   chlorget = reactive({
     raster(paste0("tifs/MODIS_chlor_2010-2021_",input$monthv[1], ".tif"))
   })
-  
+  bathcat = reactive({
+    colorNumeric(palette = c('#eae37b', '#baaf06','#baaf06','#baaf06','#eae37b'),
+                 domain = c(input$bathint[2]:input$bathint[1]),  na.color = "transparent")
+  })
   
   #//////////////////////\\\\\\\\\\\\\\\\\\\\\/////////////////////////////
   #/////////////    Base map             \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -76,17 +83,15 @@ server <- shinyServer(function(input, output, session){
     leaflet() %>% 
       addEsriBasemapLayer(esriBasemapLayers$Oceans, autoLabels = TRUE)%>%
       setView(-72.65, 40.0285, zoom = 7) %>% 
+      addPolylines(data = cont, weight = 1) %>% 
       onRender(
         "function(el,x){
-                    this.on('mousemove', function(e) {
+                    this.on('click', function(e) {
                         var lat = e.latlng.lat;
                         var lng = e.latlng.lng;
                         var coord = [lat, lng];
                         Shiny.onInputChange('hover_coordinates', coord)
                     });
-                    this.on('mouseout', function(e) {
-                        Shiny.onInputChange('hover_coordinates', null)
-                    })
                 }"
       )
     
@@ -95,14 +100,16 @@ server <- shinyServer(function(input, output, session){
   #/////////////    ObserverEvent          ani  (animal) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   
   observeEvent(c(input$ani,input$aninum),{
+    
     if(input$ani){
+      i = theaninum()
       leafletProxy("map") %>%
         clearGroup("Scallop Density") %>%
-        addPolygons(data = animal[theaninum()],  color = ~pal(animal[[theaninum()]]),
+        addPolygons(data = animal[i],  color = ~pal(animal[[i]]),
                     fill = TRUE, group = "Scallop Density", 
-                    fillOpacity = animal[[theaninum()]] / max(animal[[theaninum()]]), #maybe try quantile(animal$DepthAve)[[3]]
+                    fillOpacity = animal[[i]] / max(animal[[i]]), #maybe try quantile(animal$DepthAve)[[3]]
                     weight = 0)%>% 
-        addLegend("bottomleft", pal = nap(),layerId = "qw", values = animal[[theaninum()]], # <br> 
+        addLegend("bottomleft", pal = nap(),layerId = "qw", values = animal[[i]], # <br> 
                   title = 'Animal Abundance <br><small> <small> From <a href="https://www.northeastoceandata.org/files/metadata/Themes/Habitat/AveragePresenceAbundanceSMAST.pdf"> SMAST </a> video <br> Survey (2003-2012) </small> </small>',
                   #labFormat = labelFormat(suffix = ""),
                   opacity = .8, group = "Scallop Density")}
@@ -111,6 +118,22 @@ server <- shinyServer(function(input, output, session){
         clearGroup("Scallop Density") %>% 
         removeControl("qw")
     }})
+  
+  
+  #/////////////    ObserverEvent          bath  (Bathem) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  
+  observeEvent(c(input$bath,input$bathint),{
+    cat4 = bathcat()
+    if(input$bath){
+      leafletProxy("map") %>%
+        clearGroup("bas") %>%
+        addRasterImage(x = ca, colors = cat4, opacity = 0.3, group = "bas")}
+    
+    else{
+      leafletProxy("map") %>%
+        clearGroup("bas") 
+    }})
+  
   
   
   
@@ -144,13 +167,13 @@ server <- shinyServer(function(input, output, session){
   
   #/////////////    ObserverEvent          ptem  (Temp) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   
-  observeEvent(c(input$ptem,input$monthv), priority = 1, {
+  observeEvent(c(input$ptem,input$monthv), {
     if(input$ptem){
-      local$rast = temget()
+      dep = temget()
       
       proxy = leafletProxy("map") %>%
         clearGroup("Temp") %>% 
-        addRasterImage(local$rast, group = "Temp", colors = cat2, opacity = 0.8) %>% 
+        addRasterImage(dep, group = "Temp", colors = cat2, opacity = 0.8) %>% 
         addLegend("bottomleft", pal = cat2, values = c(-2:24), layerId = "er",
                   title = "TEMP(c)",opacity = .8)}
     else{
@@ -158,57 +181,6 @@ server <- shinyServer(function(input, output, session){
         clearGroup("Temp") %>% 
         removeControl("er")
     }})
-  
-  
-  
-  observeEvent(
-    input$hover_coordinates[1],
-    {if(input$ptem){# extract raster value based on input$hover_coordinates
-      local$raster_value <- raster::extract(
-        local$rast,
-        matrix(
-          c(input$hover_coordinates[2], input$hover_coordinates[1]),
-          nrow = 1
-        )
-      )
-      
-      # cursor lat/long and corresponding raster value in a reactive data.frame
-      local$raster_value <- data.frame(
-        value = round(local$raster_value, 2),
-        long = input$hover_coordinates[2],
-        lat = input$hover_coordinates[1]
-      )
-    }}
-  )
-  
-  # Use "addCircleMarkers" to generate popup containing raster value
-  observeEvent(
-    local$raster_value, 
-    {
-      if(input$ptem){
-        req(input$hover_coordinates[1], local$rast)
-        
-        leafletProxy("map") %>%
-          addCircleMarkers(
-            data = local$raster_value,
-            label = ~ value,
-            labelOptions = labelOptions(
-              style = list(
-                "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
-                "font-size" = "12px",
-                "font-weight" = "bold",
-                "border-color" = "rgba(0,0,0,0.5)"
-              )
-            ),
-            stroke = FALSE,
-            fill = TRUE,
-            fillColor = "#00000000",
-            radius = 8
-          )
-      }}
-  )
-  
-  
   
   #/////////////    ObserverEvent          pchl  (Chlo) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   
@@ -218,9 +190,7 @@ server <- shinyServer(function(input, output, session){
       
       proxy = leafletProxy("map") %>%
         clearGroup("chlo") %>% 
-        addRasterImage(chat,
-                       group = "chlo", colors = cat3,
-                       opacity = 0.7) %>% 
+        addRasterImage(chat, group = "chlo", colors = cat3,opacity = 0.8) %>% 
         addLegend("bottomleft", pal = cat3, values = c(0:10), layerId = "dr",
                   title = "Chlorophil	mg/m^3",opacity = .8 )}
     else{
@@ -228,6 +198,67 @@ server <- shinyServer(function(input, output, session){
         clearGroup("chlo") %>% 
         removeControl("dr")
     }})
+  
+  
+  #/////////////    Observer          inst  (Chlo) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  
+  
+  observe({
+    invalidateLater(30)
+  })
+  
+  observeEvent(
+    c(input$insp,input$monthv),{
+      cho = (1:3)[(c("Temp","Chlor","Depth") == input$insp)]
+      if (cho == 1) {
+        local$rast = temget()
+      }
+      if (cho == 2) {
+        local$rast = chlorget()
+      }
+      if (cho == 3) {
+        local$rast = ca
+      }
+    }
+  )
+  
+  observeEvent(
+    input$hover_coordinates[1],{# extract raster value based on input$hover_coordinates      
+      print(input$hover_coordinates[1])
+      print(input$hover_coordinates[2])
+      x <- raster::extract(
+        local$rast,
+        matrix(
+          c(input$hover_coordinates[2], input$hover_coordinates[1]),
+          nrow = 1
+        )
+      )
+      
+      # cursor lat/long and corresponding raster value in a reactive data.frame
+      local$raster_value <- data.frame(
+        value = round(x, 2),
+        long = input$hover_coordinates[2],
+        lat = input$hover_coordinates[1]
+      )
+      
+      proxy = leafletProxy("map")%>%
+        clearGroup("Clic")
+      
+      leafletProxy("map") %>%
+        addCircleMarkers(
+          data = local$raster_value,
+          label = ~ value,
+          group = "Clic",
+          stroke = F,
+          fill = TRUE,
+          fillColor = "#00000000",
+          radius = 2
+        )
+    }
+  )
+  
+  
+  
   
   
 })

@@ -6,12 +6,16 @@ library(rgdal)
 library(htmlwidgets)
 library(raster) #need to install
 
+# animal = rgdal::readOGR("geojson/Scallops.geojson")
+# cmwl = rgdal::readOGR("geojson/CleanMaster_Windlease.geojson")
 
-img_dir = "images"
+temp = list()
+chlo = list()
 
-animal = rgdal::readOGR("geojson/Scallops.geojson")
-cmwl = rgdal::readOGR("geojson/CleanMaster_Windlease.geojson")
-taom = raster("tifs/MODIS_SST_2010-2021_1.tif")
+for (i in 1:12) {
+  temp[[i]] = raster(paste0("tifs/MODIS_SST_2010-2021_",i,".tif"))
+}
+
 
 
 cat2 = colorNumeric(palette = c('#005aff', '#43c8c8','#77DD77', '#fff700', '#ff0000', "#B42222"),
@@ -38,9 +42,10 @@ ui <- bootstrapPage(
                 sliderInput("monthv", "Month", 1, 12,
                             value = 1, step = 1),
                 checkboxInput("ani", "Animal Density", FALSE),
-                checkboxInput("ploo", "WindEnergy Lease", FALSE),
+                checkboxInput("win", "WindEnergy Lease", FALSE),
                 checkboxInput("ptem", "Tempurature", FALSE),
                 checkboxInput("pchl", "Chlorophyll", FALSE),
+                checkboxInput("insp", "Inspector", FALSE),
                 selectInput("aninum", label = h3("Select Animal Dataset"), 
                             choices = (names(animal)[c(-1,-8,-9)]))))
 
@@ -51,14 +56,13 @@ server <- shinyServer(function(input, output, session){
     rast = NULL,
     raster_value = data.frame(value = NA, long = 0, lat = 0)
   )
-  
   theaninum = reactive({
     (1:length(names(animal)))[names(animal) == input$aninum]
   })
   nap = reactive({
     colorBin (
       palette = c("blue","purple","red","yellow"),
-      domain = animal[[theaninum()]],
+      domain = animal[[(1:length(names(animal)))[names(animal) == input$aninum]]],
       n = 7, pretty=TRUE)})
   temget = reactive({
     raster(paste0("tifs/MODIS_SST_2010-2021_",input$monthv[1], ".tif"))
@@ -96,13 +100,14 @@ server <- shinyServer(function(input, output, session){
   
   observeEvent(c(input$ani,input$aninum),{
     if(input$ani){
+      i = theaninum()
       leafletProxy("map") %>%
         clearGroup("Scallop Density") %>%
-        addPolygons(data = animal[theaninum()],  color = ~pal(animal[[theaninum()]]),
+        addPolygons(data = animal[i],  color = ~pal(animal[[i]]),
                     fill = TRUE, group = "Scallop Density", 
-                    fillOpacity = animal[[theaninum()]] / max(animal[[theaninum()]]), #maybe try quantile(animal$DepthAve)[[3]]
+                    fillOpacity = animal[[i]] / max(animal[[i]]), #maybe try quantile(animal$DepthAve)[[3]]
                     weight = 0)%>% 
-        addLegend("bottomleft", pal = nap(),layerId = "qw", values = animal[[theaninum()]], # <br> 
+        addLegend("bottomleft", pal = nap(),layerId = "qw", values = animal[[i]], # <br> 
                   title = 'Animal Abundance <br><small> <small> From <a href="https://www.northeastoceandata.org/files/metadata/Themes/Habitat/AveragePresenceAbundanceSMAST.pdf"> SMAST </a> video <br> Survey (2003-2012) </small> </small>',
                   #labFormat = labelFormat(suffix = ""),
                   opacity = .8, group = "Scallop Density")}
@@ -114,10 +119,10 @@ server <- shinyServer(function(input, output, session){
   
   
   
-  #/////////////    ObserverEvent          ploo  (windlease) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  #/////////////    ObserverEvent          win  (windlease) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   
-  observeEvent(input$ploo,{
-    if(input$ploo){
+  observeEvent(input$win,{
+    if(input$win){
       proxy = leafletProxy("map")%>%
         clearGroup("Wind Lease Area") %>% 
         addPolygons(data = cmwl,  color = "green", fill = TRUE, group = "Wind Lease Area",
@@ -146,11 +151,9 @@ server <- shinyServer(function(input, output, session){
   
   observeEvent(c(input$ptem,input$monthv), priority = 1, {
     if(input$ptem){
-      local$rast = temget()
-      
       proxy = leafletProxy("map") %>%
         clearGroup("Temp") %>% 
-        addRasterImage(local$rast, group = "Temp", colors = cat2, opacity = 0.8) %>% 
+        addRasterImage(temp[[input$monthv]], group = "Temp", colors = cat2, opacity = 0.8) %>% 
         addLegend("bottomleft", pal = cat2, values = c(-2:24), layerId = "er",
                   title = "TEMP(c)",opacity = .8)}
     else{
@@ -158,55 +161,6 @@ server <- shinyServer(function(input, output, session){
         clearGroup("Temp") %>% 
         removeControl("er")
     }})
-  
-  
-  
-  observeEvent(
-    input$hover_coordinates[1],
-    {if(input$ptem){# extract raster value based on input$hover_coordinates
-      local$raster_value <- raster::extract(
-        local$rast,
-        matrix(
-          c(input$hover_coordinates[2], input$hover_coordinates[1]),
-          nrow = 1
-        )
-      )
-      
-      # cursor lat/long and corresponding raster value in a reactive data.frame
-      local$raster_value <- data.frame(
-        value = round(local$raster_value, 2),
-        long = input$hover_coordinates[2],
-        lat = input$hover_coordinates[1]
-      )
-    }}
-  )
-  
-  # Use "addCircleMarkers" to generate popup containing raster value
-  observeEvent(
-    local$raster_value, 
-    {
-      if(input$ptem){
-      req(input$hover_coordinates[1], local$rast)
-      
-      leafletProxy("map") %>%
-        addCircleMarkers(
-          data = local$raster_value,
-          label = ~ value,
-          labelOptions = labelOptions(
-            style = list(
-              "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
-              "font-size" = "12px",
-              "font-weight" = "bold",
-              "border-color" = "rgba(0,0,0,0.5)"
-            )
-          ),
-          stroke = FALSE,
-          fill = TRUE,
-          fillColor = "#00000000",
-          radius = 8
-        )
-    }}
-  )
   
   
   
@@ -219,8 +173,8 @@ server <- shinyServer(function(input, output, session){
       proxy = leafletProxy("map") %>%
         clearGroup("chlo") %>% 
         addRasterImage(chat,
-                 group = "chlo", colors = cat3,
-                 opacity = 0.7) %>% 
+                       group = "chlo", colors = cat3,
+                       opacity = 0.7) %>% 
         addLegend("bottomleft", pal = cat3, values = c(0:10), layerId = "dr",
                   title = "Chlorophil	mg/m^3",opacity = .8 )}
     else{
@@ -228,6 +182,55 @@ server <- shinyServer(function(input, output, session){
         clearGroup("chlo") %>% 
         removeControl("dr")
     }})
+  
+  #/////////////    inspector code    insp   ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  
+  
+  observeEvent(
+    input$hover_coordinates[1],
+    {if(input$ptem){# extract raster value based on input$hover_coordinates
+      x <- raster::extract(
+        local$rast,
+        matrix(
+          c(input$hover_coordinates[2], input$hover_coordinates[1]),
+          nrow = 1
+        )
+      )
+      
+      # cursor lat/long and corresponding raster value in a reactive data.frame
+      local$raster_value <- data.frame(
+        value = round(x, 2),
+        long = input$hover_coordinates[2],
+        lat = input$hover_coordinates[1]
+      )
+    }}
+  )
+  
+  # Use "addCircleMarkers" to generate popup containing raster value
+  observeEvent(
+    local$raster_value, 
+    {
+      if(input$ptem){
+        
+        leafletProxy("map") %>%
+          addCircleMarkers(
+            data = local$raster_value,
+            label = ~ value,
+            labelOptions = labelOptions(
+              style = list(
+                "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                "font-size" = "12px",
+                "font-weight" = "bold",
+                "border-color" = "rgba(0,0,0,0.5)"
+              )
+            ),
+            stroke = FALSE,
+            fill = TRUE,
+            fillColor = "#00000000",
+            radius = 8
+          )
+      }}
+  )
   
   
 })
