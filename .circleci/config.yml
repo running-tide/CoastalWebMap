@@ -14,6 +14,7 @@ jobs:
       - gcp-gcr/build-image:
           google-project-id: GOOGLE_PROJECT_ID_COASTAL
           image: "shiny-dashboard-test"
+          docker-context: "./CloudApp"
           registry-url: us.gcr.io
           tag: ${CIRCLE_TAG}
       - gcp-gcr/push-image:
