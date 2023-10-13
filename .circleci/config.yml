@@ -1,0 +1,40 @@
+version: 2.1
+orbs:
+  gcp-gcr: circleci/gcp-gcr@0.15.3
+  cloudrun: circleci/gcp-cloud-run@1.0.2
+jobs:
+  deploy-prod:
+    executor: gcp-gcr/default
+    steps:
+      - checkout
+      - gcp-gcr/gcr-auth:
+          gcloud-service-key: GCP_SERVICE_KEY_CIRCLECI_MAIN
+          google-project-id: GOOGLE_PROJECT_ID_PROD
+          google-compute-zone: GOOGLE_COMPUTE_ZONE
+      - gcp-gcr/build-image:
+          google-project-id: GOOGLE_PROJECT_ID_PROD
+          image: "shiny-dashboard-test"
+          registry-url: us.gcr.io
+          tag: ${CIRCLE_TAG}
+      - gcp-gcr/push-image:
+          google-project-id: GOOGLE_PROJECT_ID_PROD
+          registry-url: us.gcr.io
+          image: "shiny-dashboard-test"
+          tag: ${CIRCLE_TAG}
+      - cloudrun/deploy:
+          platform: "managed"
+          image: "us.gcr.io/${GOOGLE_PROJECT_ID_PROD}/shiny-dashboard-test:${CIRCLE_TAG}"
+          service-name: "${GOOGLE_CLOUD_RUN_SERVICE_NAME}"
+          region: "${GOOGLE_COMPUTE_ZONE}"
+          unauthenticated: true
+workflows:
+  deploy:
+    jobs:
+      - deploy-prod:
+          context:
+            - RunningTide          
+          filters:
+            tags:
+              only: /(v*)^((?!beta).)*$/
+            branches:
+              ignore: /.*/
