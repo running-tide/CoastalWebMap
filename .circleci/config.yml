@@ -9,21 +9,21 @@ jobs:
       - checkout
       - gcp-gcr/gcr-auth:
           gcloud-service-key: GCP_SERVICE_KEY_COASTAL_KEY
-          google-project-id: coastal-monitoring-398413
+          google-project-id: GOOGLE_PROJECT_ID_COASTAL
           google-compute-zone: GOOGLE_COMPUTE_ZONE
       - gcp-gcr/build-image:
-          google-project-id: coastal-monitoring-398413
+          google-project-id: GOOGLE_PROJECT_ID_COASTAL
           image: "shiny-dashboard-test"
           registry-url: us.gcr.io
           tag: ${CIRCLE_TAG}
       - gcp-gcr/push-image:
-          google-project-id: coastal-monitoring-398413
+          google-project-id: GOOGLE_PROJECT_ID_COASTAL
           registry-url: us.gcr.io
           image: "shiny-dashboard-test"
           tag: ${CIRCLE_TAG}
       - cloudrun/deploy:
           platform: "managed"
-          image: "us.gcr.io/coastal-monitoring-398413/shiny-dashboard-test:${CIRCLE_TAG}"
+          image: "us.gcr.io/${GOOGLE_PROJECT_ID_COASTAL}/shiny-dashboard-test:${CIRCLE_TAG}"
           service-name: "shiney-dashboard-test-2"
           region: "${GOOGLE_COMPUTE_ZONE}"
           unauthenticated: true
