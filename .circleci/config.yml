@@ -10,6 +10,7 @@ jobs:
       - gcp-gcr/gcr-auth:
           gcloud-service-key: GCP_SERVICE_KEY_COASTAL_KEY
           google-project-id: coastal-monitoring-398413
+          google-compute-zone: GOOGLE_COMPUTE_ZONE
       - gcp-gcr/build-image:
           google-project-id: coastal-monitoring-398413
           image: "shiny-dashboard-test"
