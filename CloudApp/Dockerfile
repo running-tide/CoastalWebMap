@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y \
 # install R packages required 
 # (change it depending on the packages you need)
 RUN R -e "install.packages('shiny', repos='http://cran.rstudio.com/')"
-RUN R -e "install.packages('rgdal', repos='http://cran.rstudio.com/')"
+RUN R -e "install.packages('sf', repos='http://cran.rstudio.com/')"
 RUN R -e "install.packages('sp', repos='http://cran.rstudio.com/')"
 RUN R -e "install.packages('leaflet')"
 RUN R -e "install.packages('leaflet.extras')"

@@ -34,7 +34,7 @@
         type: 'raster-dem',
         url: 'https://api.maptiler.com/tiles/ocean-rgb/tiles.json',
       });
-      map.setTerrain({ source: 'bathymetry', exaggeration: 3 });
+      map.setTerrain({ source: 'bathymetry', exaggeration: 30 });
     });
 
     map.on('load', () => {

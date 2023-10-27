@@ -2,18 +2,21 @@ library(shiny)
 library(leaflet)
 library(leaflet.extras)
 library(leaflet.esri)
-library(rgdal)
 library(htmlwidgets)
 library(raster) #need to install
+library(sf)
 
 
 img_dir = "images"
 
-animal = rgdal::readOGR("geojson/Scallops.geojson")
-cmwl = rgdal::readOGR("geojson/CleanMaster_Windlease.geojson")
+animal = st_read("geojson/Scallops.geojson")
+cmwl = st_read("geojson/CleanMaster_Windlease.geojson")
 taom = raster("tifs/MODIS_SST_2010-2021_1.tif")
 ca = raster("tifs/bathymetry.tif")
-cont = rgdal::readOGR("geojson/Contors_5_110_15r.geojson")
+cont = st_read("geojson/Contors_5_110_15r.geojson")
+sed = raster("tifs/Sedimenttiff.tif")
+
+st_drivers()
 
 cat2 = colorNumeric(palette = c('#005aff', '#43c8c8','#77DD77', '#fff700', '#ff0000', "#B42222"),
                     domain = c(-2:30), na.color = "transparent")
@@ -28,25 +31,29 @@ pal <- colorBin (
   palette = c("blue","purple","red","yellow"), domain = NULL,n = 7, pretty=TRUE)
 
 
+opu1 = .8
+# need to add code to use these
+opu2 = 0.3
+
 
 ui <- bootstrapPage(
   tags$style(type = "text/css", "html, body {width:100%;height:100%}"),
   leafletOutput("map", width = "100%", height = "100%"),
   absolutePanel(top = 10, right = 10,
+                checkboxInput("bath", "Bathymetry", FALSE),
                 sliderInput("bathint", "Depth", -100, 0,
                             value = c(-20, -10), step = 1),
+                checkboxInput("ptem", "Tempurature", FALSE),
+                checkboxInput("pchl", "Chlorophyll", FALSE),
                 sliderInput("monthv", "Month", 1, 12,
                             value = 1, step = 1),
                 checkboxInput("ani", "Animal Density", FALSE),
-                checkboxInput("ploo", "WindEnergy Lease", FALSE),
-                checkboxInput("ptem", "Tempurature", FALSE),
-                checkboxInput("pchl", "Chlorophyll", FALSE),
-                checkboxInput("bath", "Bathymetry", FALSE),
                 selectInput("aninum", label = ("Select Animal Dataset"), 
                             choices = (names(animal)[c(-1,-8,-9)])),
+                checkboxInput("ploo", "WindEnergy Lease", FALSE),
                 selectInput("insp", label = "inspector tool (click to retrieve value)", 
-                            choices = c("Temp","Chlor","Depth")
-                )))
+                            choices = c("Temp","Chlor","Depth"))
+                ))
 
 
 server <- shinyServer(function(input, output, session){
@@ -71,7 +78,7 @@ server <- shinyServer(function(input, output, session){
     raster(paste0("tifs/MODIS_chlor_2010-2021_",input$monthv[1], ".tif"))
   })
   bathcat = reactive({
-    colorNumeric(palette = c('#eae37b', '#baaf06','#baaf06','#baaf06','#eae37b'),
+    colorNumeric(palette =  '#baaf06',
                  domain = c(input$bathint[2]:input$bathint[1]),  na.color = "transparent")
   })
   
@@ -83,7 +90,7 @@ server <- shinyServer(function(input, output, session){
     leaflet() %>% 
       addEsriBasemapLayer(esriBasemapLayers$Oceans, autoLabels = TRUE)%>%
       setView(-72.65, 40.0285, zoom = 7) %>% 
-      addPolylines(data = cont, weight = 1) %>% 
+      addRasterImage(sed, group = "Temp", colors = cat2, opacity = 0.8) %>% 
       onRender(
         "function(el,x){
                     this.on('click', function(e) {

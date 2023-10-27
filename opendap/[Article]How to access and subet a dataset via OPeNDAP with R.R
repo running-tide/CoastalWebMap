@@ -1,11 +1,13 @@
 library(ncdf4)
 library(lubridate)
 
-USERNAME = readline("Enter your username: ")# input your username
-PASSWORD = readline("Enter your password: ")# input your password
+USERNAME = "jinnis"# input your username
+PASSWORD = "Innis832787"# input your password
 
 server = "my.cmems-du.eu";                    # Copernicus Marine server
 datasetID = "cmems_obs_glo_bgc3d_rep_weekly";  # datasetID
+
+#https://my.cmems-du.eu/thredds/dodsC/cmems_obs_glo_bgc3d_rep_weekly
 
 # creates the OPeNDAP url
 url <- paste ("https://", USERNAME, ":", PASSWORD,"@",server,"/thredds/dodsC/",datasetID, sep = "")
@@ -55,6 +57,7 @@ btw <- function(data, num){
   c(min(which(num<=data)), max(which(num>=data)))
 }
 
+
 # Starting indices
 lon_indices <- btw(data = lon, num = x)
 lat_indices <- btw(data = lat, num = y)
@@ -76,6 +79,11 @@ count <- c(lon_range, lat_range, depth_range, time_range) #dimension CHL
 chl <- ncvar_get(ds,"chl", start = offset, count = count)
 
 dim(chl)
+
+
+
+
+
 
 
 # List the values of the dimensions of the dataset ds
