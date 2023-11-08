@@ -1,0 +1,12 @@
+<PAMDataset>
+  <PAMRasterBand band="1">
+    <Description>chlor_a</Description>
+    <Metadata>
+      <MDI key="STATISTICS_MAXIMUM">74.969985961914</MDI>
+      <MDI key="STATISTICS_MEAN">1.6710465938855</MDI>
+      <MDI key="STATISTICS_MINIMUM">0.20362006127834</MDI>
+      <MDI key="STATISTICS_STDDEV">2.1578484156082</MDI>
+      <MDI key="STATISTICS_VALID_PERCENT">72.88</MDI>
+    </Metadata>
+  </PAMRasterBand>
+</PAMDataset>

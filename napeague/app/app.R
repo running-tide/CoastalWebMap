@@ -6,11 +6,20 @@ library(sf)
 library(htmlwidgets)
 library(raster)
 
-cmwl = st_read("geojson/NapeagueBay.geojson")
-dep = raster("tifs/napeaguebaybath.tif")
+#setwd("app/")
 
-cat2 = colorNumeric(palette = c('#005aff', '#43c8c8','#77DD77', '#fff700'),
-                    domain = c(-11:2), na.color = "transparent")
+cmwl = st_read("geojson/NapeagueBay.geojson")
+dep = raster("tifs/naibagbath.tif")
+sed = raster("tifs/sedime.tif")
+
+
+cap = c("#7e7e7e40"   ,"#7e7e7e40"   ,"#7e7e7e40"   ,"#7e7e7e40"  ,"#ffbf9740"  ,"#ffbf9740"  ,"#ffbf9740"  ,"#B4222240"  ,"#B4222240"  ,"#B4222240"  ,"#77DD7740"  ,"#77DD7740","#77DD7740" ,"#ffbf9780" ,"#B4222280" ,"#77DD7780")
+cat5 = colorFactor(palette = cap, domain = values(sed), na.color = "transparent", alpha = TRUE)
+cat5c = colorFactor(palette = c( "#77DD77", "#7e7e7e", "#B42222"  , "#ffbf97"), domain = c("Mix","Mud","Gravel","Sand"))
+
+
+cat2 = colorNumeric(palette = c('#000000', '#43c8c8',"#ffbf97",'#77DD77', '#005aff'),
+                    domain = c(-120:0), na.color = "transparent")
 
 
 
@@ -19,36 +28,18 @@ ui <- bootstrapPage(
   tags$style(type = "text/css", "html, body {width:100%;height:100%}"),
   leafletOutput("map", width = "100%", height = "100%"),
   absolutePanel(top = 10, right = 10,
-                checkboxInput("ploo", "NapeagueBay Lease", TRUE),
-                checkboxInput("ptem", "Bathymetry", TRUE),
+                checkboxInput("ploo", "NapeagueBay Lease", FALSE),
+                checkboxInput("ptem", "Bathymetry", FALSE),
+                checkboxInput("sedi", "Sediment", FALSE)
                 ))
 
 
 server <- shinyServer(function(input, output, session){
-  
   local <- reactiveValues(
     rast = NULL,
     raster_value = data.frame(value = NA, long = 0, lat = 0)
   )
-  theaninum = reactive({
-    (1:length(names(animal)))[names(animal) == input$aninum]
-  })
-  nap = reactive({
-    colorBin (
-      palette = c("blue","purple","red","yellow"),
-      domain = animal[[theaninum()]],
-      n = 7, pretty=TRUE)
-  })
-  temget = reactive({
-    raster(paste0("tifs/MODIS_SST_2010-2021_",input$monthv[1], ".tif"))
-  })
-  chlorget = reactive({
-    raster(paste0("tifs/MODIS_chlor_2010-2021_",input$monthv[1], ".tif"))
-  })
-  bathcat = reactive({
-    colorNumeric(palette =  '#baaf06',
-                 domain = c(input$bathint[2]:input$bathint[1]),  na.color = "transparent")
-  })
+
   
   #//////////////////////\\\\\\\\\\\\\\\\\\\\\/////////////////////////////
   #/////////////    Base map             \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -60,6 +51,7 @@ server <- shinyServer(function(input, output, session){
                           options = providerTileOptions(maxZoom = 13)
                           )%>%
       setView(-72.1, 41.0285, zoom = 12) %>% 
+      addScaleBar(position = "bottomright") %>% 
       onRender(
         "function(el,x){
                     this.on('click', function(e) {
@@ -79,14 +71,14 @@ server <- shinyServer(function(input, output, session){
   observeEvent(input$ploo,{
     if(input$ploo){
       proxy = leafletProxy("map")%>%
-        clearGroup("Wind Lease Area") %>% 
-        addPolygons(data = cmwl,  color = "green", fill = TRUE, group = "Wind Lease Area",
+        clearGroup("NapeagueBay Lease") %>% 
+        addPolygons(data = cmwl,  color = "green", fill = TRUE, group = "NapeagueBay Lease",
                     stroke = TRUE, fillOpacity = .2, weight = 1)%>%
-        addLegend("bottomleft",layerId = "as", labels ='Wind Lease Area', 
-                  colors = "green", group = "Wind Lease Area") }
+        addLegend("bottomleft",layerId = "as", labels ='NapeagueBay Lease', 
+                  colors = "green", group = "FOOTPRINT") }
     else{
       proxy = leafletProxy("map") %>%
-        clearGroup("Wind Lease Area")  %>% 
+        clearGroup("NapeagueBay Lease")  %>% 
         removeControl("as")
     }})
   
@@ -100,33 +92,35 @@ server <- shinyServer(function(input, output, session){
 
       
       proxy = leafletProxy("map") %>%
-        clearGroup("Temp") %>% 
-        addRasterImage(dep, group = "Temp", colors = cat2, opacity = 0.8) %>% 
-        addLegend("bottomleft", pal = cat2, values = c(-11:2), layerId = "er",
-                  title = "TEMP(c)",opacity = .8)}
+        clearGroup("bath") %>% 
+        addRasterImage(dep, group = "bath", colors = cat2, opacity = 0.8) %>% 
+        addLegend("bottomleft", pal = cat2, values = c(-120:0), layerId = "er",
+                  title = "Bathymetry (m)",opacity = .8)}
     else{
       proxy = leafletProxy("map") %>%
-        clearGroup("Temp") %>% 
+        clearGroup("bath") %>% 
         removeControl("er")
     }})
   
-  #/////////////    ObserverEvent          pchl  (Chlo) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   
-  observeEvent(c(input$pchl,input$monthv),{
-    if(input$pchl){
-      chat = chlorget()
-      
-      proxy = leafletProxy("map") %>%
-        clearGroup("chlo") %>% 
-        addRasterImage(chat, group = "chlo", colors = cat3,opacity = 0.8) %>% 
-        addLegend("bottomleft", pal = cat3, values = c(0:10), layerId = "dr",
-                  title = "Chlorophil	mg/m^3",opacity = .8 )}
+  #/////////////    ObserverEvent          sedi  (sediment) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  
+  observeEvent(input$sedi,{
+    
+    if(input$sedi){
+      leafletProxy("map") %>%
+        clearGroup("sad") %>%
+        addRasterImage(x = sed, colors = cat5, opacity = 1, group = "sad") %>% 
+        addLegend(pal = cat5c, values = c("Mix","Mud","Gravel","Sand"), group = "sad", 
+                  position = "bottomleft", layerId = "assa", title = 'Sediment <br><small> <small> <a from href="https://portal.midatlanticocean.org/static/data_manager/metadata/html/SoftSediment_2020_metadata.html"> NAMERA survey </a> </small> </small>')}
+    
     else{
-      proxy = leafletProxy("map") %>%
-        clearGroup("chlo") %>% 
-        removeControl("dr")
+      leafletProxy("map") %>%
+        clearGroup("sad") %>% 
+        removeControl("assa")
     }})
   
+
   
   #/////////////    Observer          inst  (Chlo) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   

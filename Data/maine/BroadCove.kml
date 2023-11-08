@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document id="root_doc">
+<Schema name="lease" id="lease">
+	<SimpleField name="OBJECTID" type="int"></SimpleField>
+	<SimpleField name="SITE_ID" type="string"></SimpleField>
+	<SimpleField name="PRIMARYSP" type="string"></SimpleField>
+	<SimpleField name="STATUS" type="string"></SimpleField>
+	<SimpleField name="LEASE_TYPE" type="string"></SimpleField>
+	<SimpleField name="LEASEHOLDE" type="string"></SimpleField>
+	<SimpleField name="CONTACT" type="string"></SimpleField>
+	<SimpleField name="LOCATION" type="string"></SimpleField>
+	<SimpleField name="WATERBODY" type="string"></SimpleField>
+	<SimpleField name="CITY" type="string"></SimpleField>
+	<SimpleField name="COUNTY" type="string"></SimpleField>
+	<SimpleField name="EXPIRATION" type="string"></SimpleField>
+	<SimpleField name="GlobalID" type="string"></SimpleField>
+	<SimpleField name="Acres" type="float"></SimpleField>
+	<SimpleField name="created_user" type="string"></SimpleField>
+	<SimpleField name="created_date" type="string"></SimpleField>
+	<SimpleField name="last_edited_user" type="string"></SimpleField>
+	<SimpleField name="last_edited_date" type="string"></SimpleField>
+	<SimpleField name="decision_url" type="string"></SimpleField>
+	<SimpleField name="SHAPEarea" type="float"></SimpleField>
+	<SimpleField name="SHAPElen" type="float"></SimpleField>
+</Schema>
+<Folder><name>lease</name>
+  <Placemark>
+	<Style><LineStyle><color>ff0000ff</color></LineStyle><PolyStyle><fill>0</fill></PolyStyle></Style>
+	<ExtendedData><SchemaData schemaUrl="#lease">
+		<SimpleData name="OBJECTID">6610</SimpleData>
+		<SimpleData name="SITE_ID">CAS BC2</SimpleData>
+		<SimpleData name="PRIMARYSP">Oyster Eastern / American</SimpleData>
+		<SimpleData name="STATUS">A</SimpleData>
+		<SimpleData name="LEASE_TYPE">S</SimpleData>
+		<SimpleData name="LEASEHOLDE">Restorative Aquaculture, LLC</SimpleData>
+		<SimpleData name="CONTACT">Angel Wilson</SimpleData>
+		<SimpleData name="LOCATION">Broad Cove</SimpleData>
+		<SimpleData name="WATERBODY">Casco Bay</SimpleData>
+		<SimpleData name="CITY">Yarmouth</SimpleData>
+		<SimpleData name="COUNTY">Cumberland</SimpleData>
+		<SimpleData name="EXPIRATION">2027/10/01 05:00:00+00</SimpleData>
+		<SimpleData name="GlobalID">{D779D934-83D8-4553-B69E-5A115B616015}</SimpleData>
+		<SimpleData name="Acres">3.59341605</SimpleData>
+		<SimpleData name="created_user">MEDMR</SimpleData>
+		<SimpleData name="created_date">2019/09/10 20:10:26+00</SimpleData>
+		<SimpleData name="last_edited_user">MEDMR</SimpleData>
+		<SimpleData name="last_edited_date">2023/07/01 00:47:50+00</SimpleData>
+		<SimpleData name="decision_url">https://www.maine.gov/dmr/sites/maine.gov.dmr/files/leases/ExecutedDecisionCASBC2.pdf</SimpleData>
+		<SimpleData name="SHAPEarea">14542.0388185332</SimpleData>
+		<SimpleData name="SHAPElen">659.41771173074</SimpleData>
+	</SchemaData></ExtendedData>
+      <Polygon><outerBoundaryIs><LinearRing><coordinates>-70.1832642732859,43.7690311842101 -70.1833670431761,43.7688089639064 -70.1823336832367,43.7686756336435 -70.1825023828268,43.768134964086 -70.182716383288,43.7681669645078 -70.1827743832355,43.767963963584 -70.1836447835268,43.7680922934393 -70.1834420537536,43.7684895237982 -70.1851031639618,43.7688311844481 -70.1848976041903,43.769297844729 -70.1832642732859,43.7690311842101</coordinates></LinearRing></outerBoundaryIs></Polygon>
+  </Placemark>
+</Folder>
+</Document></kml>

@@ -3,26 +3,32 @@ library(leaflet)
 library(leaflet.extras)
 library(leaflet.esri)
 library(htmlwidgets)
-library(raster) #need to install
+library(raster) #
 library(sf)
 
-
-img_dir = "images"
+#setwd("app/")
 
 animal = st_read("geojson/Scallops.geojson")
 cmwl = st_read("geojson/CleanMaster_Windlease.geojson")
 taom = raster("tifs/MODIS_SST_2010-2021_1.tif")
 ca = raster("tifs/bathymetry.tif")
 cont = st_read("geojson/Contors_5_110_15r.geojson")
-sed = raster("tifs/Sedimenttiff.tif")
+sed = raster("tifs/SedimentLowC.tif")
 
-st_drivers()
+sort(unique(values(sed)))
+
+cap = c("#7e7e7e40"   ,"#7e7e7e40"   ,"#7e7e7e40"   ,"#7e7e7e40"  ,"#ffbf9740"  ,"#ffbf9740"  ,"#ffbf9740"  ,"#B4222240"  ,"#B4222240"  ,"#B4222240"  ,"#77DD7740"  ,"#77DD7740","#77DD7740" ,"#ffbf9780" ,"#B4222280" ,"#77DD7780")
+
+cat5 = colorFactor(palette = cap, domain = values(sed), na.color = "transparent", alpha = TRUE)
+cat5c = colorFactor(palette = c( "#77DD77", "#7e7e7e", "#B42222"  , "#ffbf97"), domain = c("Mix","Mud","Gravel","Sand"))
+
 
 cat2 = colorNumeric(palette = c('#005aff', '#43c8c8','#77DD77', '#fff700', '#ff0000', "#B42222"),
                     domain = c(-2:30), na.color = "transparent")
 
-cat3 = colorNumeric(palette = c('#3500a8', '#0800ba','#003fd6', '#00aca9', '#77f800', "#ff8800",
-                                '#b30000', '#920000', "#880000"), domain = c(0:10),  na.color = "transparent")
+cat3 = colorNumeric(palette = c('#3500FF00', '#0800ba00','#003fd620', '#00aca97F', '#77f800BF', "#ff8800",
+                                '#b30000', '#920000', "#880000FF"), domain = c(0,10),
+                    na.color = "transparent", alpha = TRUE)
 vis3 = list(min= 0,max= 10,
             palette= c('#3500a8', '#0800ba','#003fd6', '#00aca9', '#77f800', "#ff8800",
                        '#b30000', '#920000', "#880000"))
@@ -31,29 +37,45 @@ pal <- colorBin (
   palette = c("blue","purple","red","yellow"), domain = NULL,n = 7, pretty=TRUE)
 
 
-opu1 = .8
+opo = .8
 # need to add code to use these
 opu2 = 0.3
 
 
+anidd = c("Scallops", "Sea Star", "Crab","Hermit Crab","Sand Dollar", "Hydrozoans/ Bryozoans", "Sponge", "Flat fish","Red hake","Skate")
+aniddn = c(2,3,4,5,6,7,10,11,12,13)
+
+
+inspectorchoice = c("Bathymetry [m]", "Temperature [degC]","Chlorophyll [mg m-3]")
+
+
 ui <- bootstrapPage(
-  tags$style(type = "text/css", "html, body {width:100%;height:100%}"),
+  tags$style(type = "text/css", "html, body {width:100%;height:100%} background-color: #007BA7;"),
   leafletOutput("map", width = "100%", height = "100%"),
-  absolutePanel(top = 10, right = 10,
-                checkboxInput("bath", "Bathymetry", FALSE),
-                sliderInput("bathint", "Depth", -100, 0,
-                            value = c(-20, -10), step = 1),
-                checkboxInput("ptem", "Tempurature", FALSE),
+  absolutePanel(top = 10, right = 10, style = "opacity: 1; background-color: #999999BF; z-index: 10",
+                checkboxInput("ploo", "Offshore Wind Leases", FALSE),
+                checkboxInput("bath", HTML("Bathymetry <a href='https://www.ncei.noaa.gov/products/etopo-global-relief-model'> ETOPO</a> 450m"), FALSE),
+                conditionalPanel(
+                  condition = "input.bath == true",
+                  sliderInput("bathint", "Depth", -100, 0,
+                              value = c(-20, -10), step = 1)
+                ),
+                checkboxInput("ptem", "Temperature", FALSE),
                 checkboxInput("pchl", "Chlorophyll", FALSE),
-                sliderInput("monthv", "Month", 1, 12,
-                            value = 1, step = 1),
-                checkboxInput("ani", "Animal Density", FALSE),
-                selectInput("aninum", label = ("Select Animal Dataset"), 
-                            choices = (names(animal)[c(-1,-8,-9)])),
-                checkboxInput("ploo", "WindEnergy Lease", FALSE),
-                selectInput("insp", label = "inspector tool (click to retrieve value)", 
-                            choices = c("Temp","Chlor","Depth"))
+                conditionalPanel(
+                  condition = "(input.pchl == true | input.ptem == true)",
+                  sliderInput("monthv", "Month", 1, 12,
+                              value = 1, step = 1)),
+                selectInput("insp", label = HTML("Inspector<small> <small> (click to see value) </small> </small>"), 
+                            choices = inspectorchoice),
+                checkboxInput("sedi", "Sediment", FALSE),
+                checkboxInput("ani", "Average Animal Abundance", FALSE),
+                conditionalPanel(
+                  condition = "input.ani == true",
+                  selectInput("aninum", label = ("Select Animal Dataset"), 
+                            choices = anidd))
                 ))
+
 
 
 server <- shinyServer(function(input, output, session){
@@ -63,7 +85,7 @@ server <- shinyServer(function(input, output, session){
     raster_value = data.frame(value = NA, long = 0, lat = 0)
   )
   theaninum = reactive({
-    (1:length(names(animal)))[names(animal) == input$aninum]
+    aniddn[which(anidd == input$aninum)]
   })
   nap = reactive({
     colorBin (
@@ -90,7 +112,7 @@ server <- shinyServer(function(input, output, session){
     leaflet() %>% 
       addEsriBasemapLayer(esriBasemapLayers$Oceans, autoLabels = TRUE)%>%
       setView(-72.65, 40.0285, zoom = 7) %>% 
-      addRasterImage(sed, group = "Temp", colors = cat2, opacity = 0.8) %>% 
+      addScaleBar(position = "bottomright") %>% 
       onRender(
         "function(el,x){
                     this.on('click', function(e) {
@@ -114,10 +136,10 @@ server <- shinyServer(function(input, output, session){
         clearGroup("Scallop Density") %>%
         addPolygons(data = animal[i],  color = ~pal(animal[[i]]),
                     fill = TRUE, group = "Scallop Density", 
-                    fillOpacity = animal[[i]] / max(animal[[i]]), #maybe try quantile(animal$DepthAve)[[3]]
+                    fillOpacity = animal[[i]] / mean(animal[[i]]), #maybe try quantile(animal$DepthAve)[[3]]
                     weight = 0)%>% 
         addLegend("bottomleft", pal = nap(),layerId = "qw", values = animal[[i]], # <br> 
-                  title = 'Animal Abundance <br><small> <small> From <a href="https://www.northeastoceandata.org/files/metadata/Themes/Habitat/AveragePresenceAbundanceSMAST.pdf"> SMAST </a> video <br> Survey (2003-2012) </small> </small>',
+                  title = 'Animal Abundance <br><small> <small>average per 11.36 m2<br><a href="https://www.northeastoceandata.org/files/metadata/Themes/Habitat/AveragePresenceAbundanceSMAST.pdf"> Video Survey Dataset </a> </small> </small>',
                   #labFormat = labelFormat(suffix = ""),
                   opacity = .8, group = "Scallop Density")}
     else{
@@ -127,7 +149,7 @@ server <- shinyServer(function(input, output, session){
     }})
   
   
-  #/////////////    ObserverEvent          bath  (Bathem) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+  #/////////////    ObserverEvent          bath  (Bathymetry) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   
   observeEvent(c(input$bath,input$bathint),{
     cat4 = bathcat()
@@ -142,7 +164,22 @@ server <- shinyServer(function(input, output, session){
     }})
   
   
+#/////////////    ObserverEvent          sedi  (sediment) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   
+  observeEvent(input$sedi,{
+
+    if(input$sedi){
+      leafletProxy("map") %>%
+        clearGroup("sad") %>%
+        addRasterImage(x = sed, colors = cat5, opacity = 1, group = "sad") %>% 
+        addLegend(pal = cat5c, values = c("Mix","Mud","Gravel","Sand"), group = "sad", 
+                  position = "bottomleft", layerId = "assa", title = 'Sediment <br><small> <small> <a from href="https://portal.midatlanticocean.org/static/data_manager/metadata/html/SoftSediment_2020_metadata.html"> NAMERA survey </a> </small> </small>')}
+    
+    else{
+      leafletProxy("map") %>%
+        clearGroup("sad") %>% 
+        removeControl("assa")
+    }})
   
   #/////////////    ObserverEvent          ploo  (windlease) ////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
   
@@ -161,7 +198,7 @@ server <- shinyServer(function(input, output, session){
                             cmwl$PROTRACT_1,
                             c(paste0("<a href='",cmwl$LEASE_DOCU,"' >Doc_1</a>")),
                             c(paste0("<a href='",cmwl$LEASE_DO_1,"' >Doc_2</a>"))))%>%
-        addLegend("bottomleft",layerId = "as", labels ='Wind Lease Area  <br><small> <small> Aggregated permitted, planning <br> and operational offshore wind <br> files from <a from href="https://portal.midatlanticocean.org/data-catalog/energy/#collapse-layer-5537"> MARCO </a> </small> </small>', 
+        addLegend("bottomleft",layerId = "as", labels ='Offshore Wind Leases  <br><small> <small> Aggregated permitted, planning <br> and operational offshore wind <br> files from <a from href="https://portal.midatlanticocean.org/data-catalog/energy/#collapse-layer-5537"> MARCO </a> </small> </small>', 
                   colors = "green", group = "Wind Lease Area") }
     else{
       proxy = leafletProxy("map") %>%
@@ -182,7 +219,7 @@ server <- shinyServer(function(input, output, session){
         clearGroup("Temp") %>% 
         addRasterImage(dep, group = "Temp", colors = cat2, opacity = 0.8) %>% 
         addLegend("bottomleft", pal = cat2, values = c(-2:24), layerId = "er",
-                  title = "TEMP(c)",opacity = .8)}
+                  title = 'TEMP(c) <br><small> <small> Monthly average <br>from 2011-2022 <br> <a from href="https://developers.google.com/earth-engine/datasets/catalog/NASA_OCEANDATA_MODIS-Terra_L3SMI"> MODIS Terra</a> </small> </small>',opacity = opo)}
     else{
       proxy = leafletProxy("map") %>%
         clearGroup("Temp") %>% 
@@ -197,9 +234,9 @@ server <- shinyServer(function(input, output, session){
       
       proxy = leafletProxy("map") %>%
         clearGroup("chlo") %>% 
-        addRasterImage(chat, group = "chlo", colors = cat3,opacity = 0.8) %>% 
-        addLegend("bottomleft", pal = cat3, values = c(0:10), layerId = "dr",
-                  title = "Chlorophil	mg/m^3",opacity = .8 )}
+        addRasterImage(chat, group = "chlo", colors = cat3) %>% 
+        addLegend("bottomleft", pal = cat3, values = c(0,10), layerId = "dr",
+                  title = 'Chlorophil	mg/m^3 <br><small> <small> Monthly average <br>from 2011-2022 <br> <a from href="https://developers.google.com/earth-engine/datasets/catalog/NASA_OCEANDATA_MODIS-Terra_L3SMI"> MODIS Terra </a> </small> </small>',opacity = opo )}
     else{
       proxy = leafletProxy("map") %>%
         clearGroup("chlo") %>% 
@@ -216,16 +253,17 @@ server <- shinyServer(function(input, output, session){
   
   observeEvent(
     c(input$insp,input$monthv),{
-      cho = (1:3)[(c("Temp","Chlor","Depth") == input$insp)]
+      cho = (1:3)[(inspectorchoice == input$insp)]
       if (cho == 1) {
-        local$rast = temget()
-      }
-      if (cho == 2) {
-        local$rast = chlorget()
-      }
-      if (cho == 3) {
         local$rast = ca
       }
+      if (cho == 2) {
+        local$rast = temget()
+      }
+      if (cho == 3) {
+        local$rast = chlorget()
+      }
+      
     }
   )
   
