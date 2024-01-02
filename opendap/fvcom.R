@@ -8,7 +8,6 @@ data = nc_open("http://www.smast.umassd.edu:8080/thredds/dodsC/FVCOM/NECOFS/Fore
 
 ncvar_get(data, "sea_floor_depth_below_geoid")
 
-
 ncvar_get(data, "longitude")
 
 
@@ -144,4 +143,8 @@ ncvar_put(ncnew, var_chl, chl, start = NA, count = NA)
 
 # Close the netCDF to save it
 nc_close(ncnew)
+
+
+
+
 
