@@ -48,284 +48,51 @@ ggplot(data, aes(x = x, y = y, color = temp)) +
 
 # ///////////\\\\\\\\\\\\//////////  makes grid
 grid <- expand.grid(
-  x = seq(from = min(data$x), to = max(data$x), length.out = 30),
-  y = seq(from = min(data$y), to = max(data$y), length.out = 30)
+  x = seq(from = min(data$x), to = max(data$x), length.out = 300),
+  y = seq(from = min(data$y), to = max(data$y), length.out = 300)
 )
 coordinates(grid) = ~x+y
 sam = st_read("worldshape.geojson")
+grid = st_as_sf(grid)
+st_crs(grid) <- st_crs(sam)
 
-st_as_sf(grid)
+grid = grid[is.na(as.numeric(st_intersects(grid, sam, sparse = T))),]
 
-dri = st_crs(sam)
+plot(grid)
 
-
-
-st_crs()
-
-st_crs(grid) <- dri
-
-st_transform(grid, st_crs(sam))
-
-
-grid[st_within(grid, sam), ]
-
-grid$temp = 1
-
-
-
-gridded(grid) = ~x+y
-
-1:nrow(grid)
-
-grid$tempdis = NA
-for (i in 44) {
-  tempdis = rep(NA, nrow(grid))
-  for (e in 1:nrow(data)) {
-    tempdis[e] =  sqrt((grid$x[i] - data$x[e])^2 + (grid$y[i] - data$y[e])^2)
-  }
-  
-  if(min(tempdis)>0.01 & sum(tempdis>0.01&tempdis<0.05)>6)
-  
-  grid$tempdis[i] = min(tempdis)
-}
-
-hist(tempdis)
-
-
-tempdis
-
-
-
-grid = grid %>% 
-  filter(tempdis < 0.01)
 
 # ///////////\\\\\\\\\\\\//////////  interpolates
 
 
 coordinates(data) = ~x+y
+st_crs(grid) <- st_crs(data)
 v = variogram(temp~1, data)
 m = fit.variogram(v, vgm(model =  "Sph"))
 
 plot(v, model = m)
-lzn.kr1 = krige(formula = temp~1, data, grid, model = m)
+interdat = krige(formula = temp~1, data, grid, model = m)
+interdat = interdat[,-2]
 
 # ///////////\\\\\\\\\\\\//////////  displays results
-plot(lzn.kr1)
+plot(interdat$var1.pred)
+
+ggplot(interdat) +
+  geom_sf(aes(color = var1.pred), size = 4) +
+  scale_color_gradient(limits = c(15, 18),low = "blue", high = "red", name = "Value")
+
+ggplot(data) +
+  geom_sf(aes(color = temp), size = 4) +
+  scale_color_gradient(limits = c(15, 18),low = "blue", high = "red", name = "Value")
 
 
 
 
 
 
+nras = raster(extent(st_bbox(interdat)),resolution = .01)
+assa = rasterize(interdat, nras)
 
-
-plo = as.matrix(lzn.kr1$var1.pred)
-image(plo)
-
-
-
-predicted <- lzn.kr1@data$var1.pred %>%
-  as.data.frame() %>%
-  rename(krige_pred = 1) %>% 
-  mutate(krige= exp(krige))
-variance <- lzn.kr1@data$var1.var %>%
-  as.data.frame() %>%
-  mutate(variance = exp(variance))
-  
-
-
-
-
-
-plo[10,10] = 16
-
-x
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-data = data.frame(x, y, temp)
-data = data %>% 
-  filter(y>41 & y<41.2) %>% 
-  filter(x>-72.5 & x< -72.2)
-
-
-
-
-ggplot(data, aes(x = x, y = y, color = temp)) +
-  geom_point(size = 3) +
-  scale_color_continuous()  # This scale function sets up the continuous color scale
-
-
-
-
-
-
-coordinates(data) = ~x+y
-grid <- expand.grid(
-  x = seq(from = min(data$x), to = max(data$x), length.out = 30),
-  y = seq(from = min(data$y), to = max(data$y), length.out = 30)
-)
-
-
-ggplot(data, aes(x = x, y = y, color = temp)) +
-  geom_point(size = 3) +
-  scale_color_continuous() +
-  geom_point(data = grid, aes(x = x, y = y), size = 1, shape = 17, color = "black")
-
-# This scale function sets up the continuous color scale
-
-
-
-grid$temp = NA
-gridded(grid) = ~x+y
-plot(grid$x, grid$y)
+plot(assa$temp)
 
 data = st_as_sf(data)
-grid = st_as_stars(grid)
-v = variogram(temp~1, data)
-m = fit.variogram(v, vgm(c("Exp", "Mat", "Sph")))
-plot(v, model = m)
-lzn.kr1 = krige(formula = temp~1, data, grid, model = m)
-plot(lzn.kr1)
-plo = as.matrix(lzn.kr1$var1.pred)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-spatial_df = data.frame(df,lon,lat)
-coordinates(spatial_df) <- c("lon", "lat")
-raster_from_points <- raster(extent(spatial_df), resolution = 0.1) # Adjust resolution if needed
-raster_from_points <- rasterize(spatial_df, raster_from_points, field = "df")
-plot(raster_from_points)
-
-
-unique(df)
-
-raster_from_points  = rasterize(spatial_df, raster(), field = "df")
-plot(raster_from_points)
-
-
-df = df[nrow(df):1,ncol(df):1]
-df = raster(df)
-plot(df)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-library(gstat)
-library(sp)
-data(meuse)
-
-plot(meuse$x~meuse$y)
-
-coordinates(meuse) = ~x+y
-
-plot(meuse)
-
-data(meuse.grid)
-
-plot(meuse.grid$y~meuse.grid$x)
-
-gridded(meuse.grid) = ~x+y
-
-plot(meuse.grid$dist)
-
-
-#> Loading required package: abind
-meuse = st_as_sf(meuse)
-meuse.grid = st_as_stars(meuse.grid)
-
-# ordinary kriging --------------------------------------------------------
-v = variogram(log(zinc)~1, meuse)
-m = fit.variogram(v, vgm(1, "Sph", 300, 1))
-plot(v, model = m)
-
-
-lzn.kr1 = krige(formula = zinc~1, meuse, meuse.grid, model = m)
-#> [using ordinary kriging]
-plot(lzn.kr1[1])
 
